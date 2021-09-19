@@ -1,24 +1,27 @@
 package logger
 
 import (
+	"context"
 	"os"
 )
 
 type Helper struct {
 	Logger
-	fields map[string]interface{}
 }
 
 func NewHelper(log Logger) *Helper {
 	return &Helper{Logger: log}
 }
 
-func (h *Helper) Log(level Level, v ...interface{}) {
-	h.Logger.Fields(h.fields).Log(level, v...)
-}
+// Extract always returns valid Helper with logger from context or with DefaultLogger as fallback.
+// Can be used in pair with function NewContext(ctx context.Context, l Logger) context.Context.
+// (e.g. propagate RequestID to logger in service handler methods).
+func Extract(ctx context.Context) *Helper {
+	if l, ok := FromContext(ctx); ok {
+		return NewHelper(l)
+	}
 
-func (h *Helper) Logf(level Level, format string, v ...interface{}) {
-	h.Logger.Fields(h.fields).Logf(level, format, v...)
+	return NewHelper(DefaultLogger)
 }
 
 func (h *Helper) Info(args ...interface{}) {
@@ -108,15 +111,9 @@ func (h *Helper) Fatalf(template string, args ...interface{}) {
 }
 
 func (h *Helper) WithError(err error) *Helper {
-	fields := copyFields(h.fields)
-	fields["error"] = err
-	return &Helper{Logger: h.Logger, fields: fields}
+	return &Helper{Logger: h.Logger.Fields(map[string]interface{}{"error": err})}
 }
 
 func (h *Helper) WithFields(fields map[string]interface{}) *Helper {
-	nfields := copyFields(fields)
-	for k, v := range h.fields {
-		nfields[k] = v
-	}
-	return &Helper{Logger: h.Logger, fields: nfields}
+	return &Helper{Logger: h.Logger.Fields(fields)}
 }

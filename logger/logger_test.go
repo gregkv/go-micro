@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"testing"
 )
 
@@ -19,4 +20,13 @@ func TestLogger(t *testing.T) {
 	h2.Warn("warn_msg2")
 
 	l.Fields(map[string]interface{}{"key3": "val4"}).Log(InfoLevel, "test_msg")
+}
+
+func TestExtract(t *testing.T) {
+	l := NewLogger(WithLevel(TraceLevel)).Fields(map[string]interface{}{"requestID": "req-1"})
+
+	ctx := NewContext(context.Background(), l)
+
+	Info("info message without request ID")
+	Extract(ctx).Info("info message with request ID")
 }
